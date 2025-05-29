@@ -1,0 +1,59 @@
+{
+    "BRUNO TURISMO": {
+        "CNPJ": "",
+        "Promotor": "",
+        "Comercial": {
+            "Enviar proposta": false,
+            "Confirmar interesse": false,
+            "Analisar contrato": false
+        },
+        "Financeiro": {
+            "Conferir documentos": false,
+            "Aprovar limite": false,
+            "Emitir cobran\u00e7a": false
+        },
+        "Diretoria": {
+            "Avaliar risco": false,
+            "Aprovar contrato": false,
+            "Assinar documento": false
+        }
+    },
+    "TURISMO": {
+        "CNPJ": "",
+        "Promotor": "",
+        "Comercial": {
+            "Enviar proposta": false,
+            "Confirmar interesse": false,
+            "Analisar contrato": false
+        },
+        "Financeiro": {
+            "Conferir documentos": false,
+            "Aprovar limite": false,
+            "Emitir cobran\u00e7a": false
+        },
+        "Diretoria": {
+            "Avaliar risco": false,
+            "Aprovar contrato": false,
+            "Assinar documento": false
+        }
+    },
+    "TURISMO OLA": {
+        "CNPJ": "",
+        "Promotor": "",
+        "Comercial": {
+            "Enviar proposta": false,
+            "Confirmar interesse": false,
+            "Analisar contrato": false
+        },
+        "Financeiro": {
+            "Conferir documentos": false,
+            "Aprovar limite": false,
+            "Emitir cobran\u00e7a": false
+        },
+        "Diretoria": {
+            "Avaliar risco": false,
+            "Aprovar contrato": false,
+            "Assinar documento": false
+        }
+    }
+}
