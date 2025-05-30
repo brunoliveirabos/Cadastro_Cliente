@@ -14,7 +14,8 @@ USERS = {"admin": "1234"}  # Usuários permitidos
 SMTP_SERVER = "smtp.gmail.com"  # exemplo: smtp.gmail.com
 SMTP_PORT = 587
 SMTP_USER = "bruno.oliveira@maiorca.com.br"
-SMTP_PASSWORD = "ti2024@!"
+SMTP_PASSWORD = "cruk zace mkjy isei"
+
 
 # Garantir que a pasta compartilhada exista
 os.makedirs(SHARED_FOLDER, exist_ok=True)
