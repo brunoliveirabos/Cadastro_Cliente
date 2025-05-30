@@ -1,11 +1,23 @@
 import streamlit as st
 import json
 import os
-import win32com.client
-import pythoncom
+import smtplib
+from email.message import EmailMessage
 
-DATA_FILE = "data.json"
+# Caminho compartilhado
+SHARED_FOLDER = r"\\199.124.1.220\publico\APROVACAO_CLIENTES"
+DATA_FILE = os.path.join(SHARED_FOLDER, "data.json")
+
 USERS = {"admin": "1234"}  # Usuários permitidos
+
+# SMTP Configurações - EDITE AQUI
+SMTP_SERVER = "smtp.gmail.com"  # exemplo: smtp.gmail.com
+SMTP_PORT = 587
+SMTP_USER = "bruno.oliveira@maiorca.com.br"
+SMTP_PASSWORD = "ti2024@!"
+
+# Garantir que a pasta compartilhada exista
+os.makedirs(SHARED_FOLDER, exist_ok=True)
 
 # Função para carregar os dados
 def load_data():
@@ -19,18 +31,21 @@ def save_data(data):
     with open(DATA_FILE, "w") as f:
         json.dump(data, f, indent=4)
 
-# Função para enviar e-mail
+# Função para enviar e-mail via smtplib
 def send_email(destinatario, assunto, corpo):
-    pythoncom.CoInitialize()
     try:
-        outlook = win32com.client.Dispatch("Outlook.Application")
-        mail = outlook.CreateItem(0)
-        mail.To = destinatario
-        mail.Subject = assunto
-        mail.Body = corpo
-        mail.Send()
-    finally:
-        pythoncom.CoUninitialize()
+        msg = EmailMessage()
+        msg["From"] = SMTP_USER
+        msg["To"] = destinatario
+        msg["Subject"] = assunto
+        msg.set_content(corpo)
+
+        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+            server.starttls()
+            server.login(SMTP_USER, SMTP_PASSWORD)
+            server.send_message(msg)
+    except Exception as e:
+        st.error(f"Erro ao enviar e-mail: {e}")
 
 # Etapas de checklist
 etapas_checklists = {
@@ -128,6 +143,3 @@ elif menu_option == "Adicionar Cliente":
             }
             save_data(data)
             st.success(f"Cliente '{nome_cliente}' cadastrado com sucesso.")
-
-
-# o windows não pode encontrar streamlit certifique de que o nome foi digitado corretamente
