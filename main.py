@@ -1,135 +1,91 @@
 import streamlit as st
 import json
 import os
-import requests
-import win32com.client as win32
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
+import smtplib
+from email.message import EmailMessage
 
-DATA_FILE = "data.json"
-PASTA_FICHAS = "fichas"
+# Caminho compartilhado
+SHARED_FOLDER = r"\\199.124.1.220\publico\APROVACAO_CLIENTES"
+DATA_FILE = os.path.join(SHARED_FOLDER, "data.json")
 
-etapas_checklists = {
-    "Comercial": ["Enviar proposta", "Confirmar interesse", "Analisar contrato"],
-    "Financeiro": ["Conferir documentos", "Aprovar limite", "Emitir cobrança"],
-    "Diretoria": ["Avaliar risco", "Aprovar contrato", "Assinar documento"]
-}
+USERS = {"admin": "1234"}  # Usuários permitidos
 
-os.makedirs(PASTA_FICHAS, exist_ok=True)
+# SMTP Configurações - EDITE AQUI
+SMTP_SERVER = "smtp.gmail.com"  # exemplo: smtp.gmail.com
+SMTP_PORT = 587
+SMTP_USER = "bruno.oliveira@maiorca.com.br"
+SMTP_PASSWORD = "cruk zace mkjy isei"
 
+
+# Garantir que a pasta compartilhada exista
+os.makedirs(SHARED_FOLDER, exist_ok=True)
+
+# Função para carregar os dados
 def load_data():
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, "r") as f:
             return json.load(f)
     return {}
 
+# Função para salvar os dados
 def save_data(data):
     with open(DATA_FILE, "w") as f:
         json.dump(data, f, indent=4)
 
-def consultar_cnpj(cnpj):
-    cnpj_limpo = ''.join(filter(str.isdigit, cnpj))
-    url = f"https://www.receitaws.com.br/v1/cnpj/{cnpj_limpo}"
-    response = requests.get(url)
-    if response.status_code == 200:
-        return response.json()
-    return None
-
+# Função para enviar e-mail via smtplib
 def send_email(destinatario, assunto, corpo):
     try:
-        outlook = win32.Dispatch("Outlook.Application")
-        mail = outlook.CreateItem(0)
-        mail.To = destinatario
-        mail.Subject = assunto
-        mail.Body = corpo
-        mail.Send()
+        msg = EmailMessage()
+        msg["From"] = SMTP_USER
+        msg["To"] = destinatario
+        msg["Subject"] = assunto
+        msg.set_content(corpo)
+
+        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+            server.starttls()
+            server.login(SMTP_USER, SMTP_PASSWORD)
+            server.send_message(msg)
     except Exception as e:
         st.error(f"Erro ao enviar e-mail: {e}")
 
-def gerar_pdf(nome, info):
-    caminho = os.path.join(PASTA_FICHAS, f"{nome}.pdf")
-    c = canvas.Canvas(caminho, pagesize=A4)
-    c.setFont("Helvetica-Bold", 14)
-    c.drawString(50, 800, "Ficha Cadastral da Empresa")
-    c.setFont("Helvetica", 12)
+# Etapas de checklist
+etapas_checklists = {
+    "Comercial": ["Enviar proposta", "Confirmar interesse", "Analisar contrato"],
+    "Financeiro": ["Conferir documentos", "Aprovar limite", "Emitir cobrança"],
+    "Diretoria": ["Avaliar risco", "Aprovar contrato", "Assinar documento"]
+}
 
-    y = 770
-    for chave, valor in info.items():
-        if isinstance(valor, dict):
-            continue
-        c.drawString(50, y, f"{chave}: {valor}")
-        y -= 20
-        if y < 60:
-            c.showPage()
-            y = 800
+# Login
+def login():
+    if "login" not in st.session_state:
+        st.session_state.login = False
 
-    c.save()
-    return caminho
-
-# INÍCIO DA INTERFACE
-st.set_page_config(layout="wide")
-st.title("Sistema de Aprovação de Cliente")
-data = load_data()
-
-menu_option = st.sidebar.selectbox("Menu", ["Painel"])
-
-if menu_option == "Painel":
-    st.subheader("Adicionar Novo Cliente")
-
-    with st.form("adicionar_cliente"):
-        cnpj = st.text_input("CNPJ")
-        promotor = st.text_input("Promotor")
-        consultar = st.form_submit_button("Consultar CNPJ e Cadastrar")
-
-    if consultar:
-        dados = consultar_cnpj(cnpj)
-        if not dados or dados.get("status") == "ERROR":
-            st.error("CNPJ inválido ou bloqueado.")
-        else:
-            nome_cliente = dados["nome"]
-            if nome_cliente in data:
-                st.warning("Cliente já cadastrado.")
+    if not st.session_state.login:
+        st.title("Login")
+        username = st.text_input("Usuário")
+        password = st.text_input("Senha", type="password")
+        if st.button("Entrar"):
+            if USERS.get(username) == password:
+                st.session_state.login = True
+                st.rerun()
             else:
-                cliente_info = {
-                    "CNPJ": dados["cnpj"],
-                    "Razao Social": dados["nome"],
-                    "Nome Fantasia": dados["fantasia"],
-                    "Endereço": f"{dados['logradouro']}, {dados['numero']} - {dados['bairro']} - {dados['municipio']}/{dados['uf']}",
-                    "CEP": dados["cep"],
-                    "Telefone": dados["telefone"],
-                    "Email": dados["email"],
-                    "Atividade Principal": dados["atividade_principal"][0]["text"],
-                    "Situação": dados["situacao"],
-                    "Capital Social": dados["capital_social"],
-                    "Promotor": promotor
-                }
-                cliente_info.update({etapa: {item: False for item in itens} for etapa, itens in etapas_checklists.items()})
-                data[nome_cliente] = cliente_info
-                save_data(data)
-                st.success(f"Cliente '{nome_cliente}' cadastrado com sucesso.")
+                st.error("Usuário ou senha incorretos.")
+        st.stop()
 
-                # Gerar PDF e salvar no session_state para download fora do form
-                caminho_pdf = gerar_pdf(nome_cliente, cliente_info)
-                st.session_state["caminho_pdf"] = caminho_pdf
-                st.session_state["nome_cliente"] = nome_cliente
+# Início do app
+login()
+data = load_data()
+st.title("Sistema de Aprovação de Cliente")
 
-    # Botão de download fora do form
-    if "caminho_pdf" in st.session_state and "nome_cliente" in st.session_state:
-        with open(st.session_state["caminho_pdf"], "rb") as f:
-            st.download_button(
-                label="📄 Baixar ficha em PDF",
-                data=f,
-                file_name=f"{st.session_state['nome_cliente']}.pdf",
-                mime="application/pdf"
-            )
+menu_option = st.sidebar.selectbox("Escolha uma opção", ["Tela Inicial", "Adicionar Cliente"])
 
-    st.divider()
-    st.subheader("Status dos Clientes")
+if menu_option == "Tela Inicial":
+    st.subheader("Clientes Registrados")
 
     if data:
         selected_cliente = st.selectbox("Selecione um cliente", list(data.keys()))
         if selected_cliente:
-            cliente_data = data[selected_cliente]
+            cliente_data = data.get(selected_cliente, {})
 
             for etapa in etapas_checklists:
                 if etapa not in cliente_data or not isinstance(cliente_data[etapa], dict):
@@ -168,3 +124,23 @@ if menu_option == "Painel":
                         st.success(f"E-mail enviado para {etapa}")
     else:
         st.warning("Nenhum cliente cadastrado ainda.")
+
+elif menu_option == "Adicionar Cliente":
+    st.subheader("Adicionar Novo Cliente")
+    nome_cliente = st.text_input("Nome do Cliente")
+    cnpj = st.text_input("CNPJ")
+    promotor = st.text_input("Promotor")
+
+    if st.button("Cadastrar Cliente"):
+        if nome_cliente.strip() == "":
+            st.warning("Nome não pode estar vazio.")
+        elif nome_cliente in data:
+            st.warning("Cliente já cadastrado.")
+        else:
+            data[nome_cliente] = {
+                "CNPJ": cnpj,
+                "Promotor": promotor,
+                **{etapa: {item: False for item in itens} for etapa, itens in etapas_checklists.items()}
+            }
+            save_data(data)
+            st.success(f"Cliente '{nome_cliente}' cadastrado com sucesso.")
